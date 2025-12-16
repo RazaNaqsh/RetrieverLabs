@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from services.chunking import simple_chunker
+from app.services.chunking.simple_chunker import simple_chunk
 
 router = APIRouter()
 
@@ -13,5 +13,5 @@ class ChunkResponse(BaseModel):
 
 @router.post("/chunk", response_model=ChunkResponse)
 async def chunk_text(payload:ChunkRequest):
-    chunks = simple_chunker(payload.text)
+    chunks = simple_chunk(payload.text)
     return {"chunks":chunks}
