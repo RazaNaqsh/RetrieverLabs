@@ -1,70 +1,82 @@
-"use client"
-  
+"use client";
+
 import Image from "next/image";
 import { useState } from "react";
 
+type Chunk = {
+  id: number;
+  text: string;
+};
+
 export default function Home() {
+  const [text, setText] = useState("");
+  const [chunks, setChunks] = useState<Chunk[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [result, setResult] = useState<any>(null);
+  async function handleChunk() {
+    setLoading(true);
+    setError(null);
 
-async function pingBackend() {
-  const res = await fetch("/api/v1/ping");
+    try {
+      const res = await fetch("/api/v1/chunk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
 
-  const text = await res.text();   
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
-  const data = JSON.parse(text);  
-  setResult(data);
-}
+      const data = await res.json();
+      setChunks(data.chunks);
+    } catch (err: any) {
+      setError(err.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+      <main style={{ padding: 20, maxWidth: 800 }}>
+        <h1>Stage 1 — Chunking</h1>
+
+        <textarea
+          rows={10}
+          style={{ width: "100%", marginTop: 10 }}
+          placeholder="Paste text here..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+
+        <button
+          onClick={handleChunk}
+          disabled={loading || !text.trim()}
+          style={{ marginTop: 10 }}
+        >
+          {loading ? "Chunking..." : "Chunk Text"}
+        </button>
+
+        {error && <p style={{ color: "red", marginTop: 10 }}>Error: {error}</p>}
+
+        <div style={{ marginTop: 20 }}>
+          {chunks.map((chunk) => (
+            <div
+              key={chunk.id}
+              style={{
+                border: "1px solid #ccc",
+                padding: 10,
+                marginBottom: 10,
+              }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px] cursor-pointer"
-            rel="noopener noreferrer"
-            onClick={pingBackend}
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-           ping
-          </a>
-     <pre>{JSON.stringify(result, null, 2)}</pre>
+              <strong>Chunk {chunk.id}</strong>
+              <p>{chunk.text}</p>
+            </div>
+          ))}
         </div>
       </main>
     </div>
