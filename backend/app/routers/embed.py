@@ -23,5 +23,5 @@ class EmbedResponse(BaseModel):
 
 @router.post("/embed", response_model=EmbedResponse)
 async def embed(payload:EmbedRequest):
-    embeddings = embed_chunks(chunk.model_dump() for chunk in payload.chunks)
+    embeddings = embed_chunks([chunk.model_dump() for chunk in payload.chunks])
     return {"embeddings":embeddings}
