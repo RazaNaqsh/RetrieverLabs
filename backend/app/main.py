@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from app.routers import chunk
 from app.routers import embed
+from app.routers import retrieve
 
 app = FastAPI()
 
 app.include_router(chunk.router)
 app.include_router(embed.router)
+app.include_router(retrieve.router)
 
 @app.get("/health")
 async def root():

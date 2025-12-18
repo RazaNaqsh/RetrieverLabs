@@ -21,6 +21,11 @@ export default function Home() {
 
   const [embeddings, setEmbeddings] = useState<Embedding[]>([]);
 
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<
+    { id: number; text: string; score: number }[]
+  >([]);
+
   async function handleChunk() {
     setLoading(true);
     setError(null);
@@ -66,6 +71,59 @@ export default function Home() {
 
       const data = await res.json();
       setEmbeddings(data.embeddings);
+    } catch (err: any) {
+      setError(err.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function buildRetrievalChunks(
+    chunks: { id: number; text: string }[],
+    embeddings: { id: number; vector: number[] }[]
+  ) {
+    return chunks.map((chunk) => {
+      const embedding = embeddings.find((emb) => emb.id === chunk.id);
+
+      if (!embedding) {
+        throw new Error(`Missing embedding for chunk ${chunk.id}`);
+      }
+
+      return {
+        id: chunk.id,
+        text: chunk.text,
+        vector: embedding.vector,
+      };
+    });
+  }
+
+  async function handleRetrieve() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Build enriched chunks
+      const retrievalChunks = buildRetrievalChunks(chunks, embeddings);
+
+      // 2. Call retrieval endpoint
+      const res = await fetch("/api/v1/retrieve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          embeddings: retrievalChunks,
+          top_k: 3,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setResults(data.results);
     } catch (err: any) {
       setError(err.message ?? "Something went wrong");
     } finally {
@@ -136,6 +194,44 @@ export default function Home() {
             >
               <strong>Chunk {emb.id}</strong>
               <p>Vector length: {emb.vector.length}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 30 }}>
+          <h2>Retrieve</h2>
+
+          <input
+            type="text"
+            placeholder="Ask a question..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{ width: "100%", padding: 8 }}
+          />
+
+          <button
+            onClick={handleRetrieve}
+            disabled={loading || !query || embeddings.length === 0}
+            style={{ marginTop: 10 }}
+          >
+            {loading ? "Retrieving..." : "Retrieve Chunks"}
+          </button>
+        </div>
+        <div style={{ marginTop: 20 }}>
+          <h3>Retrieved Results</h3>
+
+          {results.map((res) => (
+            <div
+              key={res.id}
+              style={{
+                border: "1px solid #666",
+                padding: 10,
+                marginBottom: 10,
+              }}
+            >
+              <strong>Chunk {res.id}</strong>
+              <p>{res.text}</p>
+              <small>Similarity score: {res.score.toFixed(4)}</small>
             </div>
           ))}
         </div>
