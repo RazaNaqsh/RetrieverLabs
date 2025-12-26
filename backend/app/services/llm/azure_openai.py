@@ -1,13 +1,21 @@
 from app.services.llm.base import LLMProvider
-
+from dotenv import load_dotenv
 from openai import AzureOpenAI
 import os
 
+load_dotenv()
+
 class AzureOpenAIProvider(LLMProvider):
     def __init__(self):
-        self.client=AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        
+        if not api_key or not endpoint:
+            raise ValueError("Missing Azure OpenAI Environment Variables!")
+
+        self.client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            api_key=api_key,
             api_version=os.getenv("AZURE_OPENAI_API_VERSION")
         )
         self.deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
